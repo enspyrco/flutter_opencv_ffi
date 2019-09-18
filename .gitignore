@@ -1,5 +1,6 @@
 # My additions 
 ios/Runner/opencv2.framework/
+ios/Build/
 
 # Miscellaneous
 *.class
