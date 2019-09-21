@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:ffi' as ffi;
 
-void main() => runApp(MyApp());
+void main() {
+  final dylib = ffi.DynamicLibrary.open('opencv2.dylib');
+  print(dylib.lookup<ffi.NativeType>('CV_VERSION'));
+  runApp(MyApp());
+}
 
 class MyApp extends StatelessWidget {
   @override
