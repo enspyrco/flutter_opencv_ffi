@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Skip build/test for docs-only changes
+      - name: Check for docs-only changes
+        id: docs-check
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            FILES=$(gh pr view ${{ github.event.pull_request.number }} --json files --jq '.files[].path')
+          else
+            FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          fi
+          NON_DOCS=$(echo "$FILES" | grep -v -E '\.(md|txt)$' | grep -v '^LICENSE' || true)
+          if [ -z "$NON_DOCS" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Install OpenCV
+        if: steps.docs-check.outputs.skip != 'true'
+        run: brew install opencv
+
+      - uses: dart-lang/setup-dart@v1
+        if: steps.docs-check.outputs.skip != 'true'
+        with:
+          sdk: stable
+
+      - name: Install dependencies
+        if: steps.docs-check.outputs.skip != 'true'
+        run: dart pub get
+
+      - name: Analyze
+        if: steps.docs-check.outputs.skip != 'true'
+        run: dart analyze --fatal-infos
+
+      - name: Run tests
+        if: steps.docs-check.outputs.skip != 'true'
+        run: dart test
