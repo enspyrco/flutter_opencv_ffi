@@ -1,0 +1,10 @@
+name: FlutterOpencvFfiBindings
+description: FFI bindings to the OpenCV C wrapper.
+output: lib/src/flutter_opencv_ffi_bindings_generated.dart
+headers:
+  entry-points:
+    - src/opencv_wrapper.h
+  include-directives:
+    - src/opencv_wrapper.h
+ffi-native:
+  asset-id: package:flutter_opencv_ffi/flutter_opencv_ffi.dart
