@@ -11,6 +11,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # Skip build/test for docs-only changes
       - name: Check for docs-only changes
@@ -19,7 +21,7 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             FILES=$(gh pr view ${{ github.event.pull_request.number }} --json files --jq '.files[].path')
           else
-            FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+            FILES=$(git diff --name-only origin/master...HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
           fi
           NON_DOCS=$(echo "$FILES" | grep -v -E '\.(md|txt)$' | grep -v '^LICENSE' || true)
           if [ -z "$NON_DOCS" ]; then

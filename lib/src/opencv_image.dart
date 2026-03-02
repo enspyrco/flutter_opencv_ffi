@@ -81,6 +81,13 @@ class CvImage implements Finalizable {
 
   bool _disposed = false;
 
+  /// Throws [StateError] if this image has been disposed.
+  void _ensureNotDisposed() {
+    if (_disposed) {
+      throw StateError('Cannot use a disposed CvImage');
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Constructors / factories
   // ---------------------------------------------------------------------------
@@ -89,7 +96,7 @@ class CvImage implements Finalizable {
   ///
   /// [flags] defaults to `cv::IMREAD_COLOR` (1).
   factory CvImage.imread(String path, {int flags = 1}) {
-    final pathPtr = path.toNativeUtf8().cast<Char>();
+    final pathPtr = path.toNativeUtf8(allocator: calloc).cast<Char>();
     final ptr = bindings.opencv_imread(pathPtr, flags);
     calloc.free(pathPtr);
     if (ptr == nullptr) {
@@ -117,19 +124,34 @@ class CvImage implements Finalizable {
   // ---------------------------------------------------------------------------
 
   /// Number of rows (height) in the image.
-  int get rows => bindings.opencv_mat_rows(_ptr);
+  int get rows {
+    _ensureNotDisposed();
+    return bindings.opencv_mat_rows(_ptr);
+  }
 
   /// Number of columns (width) in the image.
-  int get cols => bindings.opencv_mat_cols(_ptr);
+  int get cols {
+    _ensureNotDisposed();
+    return bindings.opencv_mat_cols(_ptr);
+  }
 
   /// OpenCV type code (e.g. CV_8UC3).
-  int get type => bindings.opencv_mat_type(_ptr);
+  int get type {
+    _ensureNotDisposed();
+    return bindings.opencv_mat_type(_ptr);
+  }
 
   /// Number of channels (e.g. 3 for BGR, 1 for grayscale).
-  int get channels => bindings.opencv_mat_channels(_ptr);
+  int get channels {
+    _ensureNotDisposed();
+    return bindings.opencv_mat_channels(_ptr);
+  }
 
   /// Whether the underlying Mat has no data.
-  bool get isEmpty => bindings.opencv_mat_empty(_ptr) != 0;
+  bool get isEmpty {
+    _ensureNotDisposed();
+    return bindings.opencv_mat_empty(_ptr) != 0;
+  }
 
   // ---------------------------------------------------------------------------
   // Operations
@@ -137,6 +159,7 @@ class CvImage implements Finalizable {
 
   /// Creates a deep copy of this image.
   CvImage clone() {
+    _ensureNotDisposed();
     final ptr = bindings.opencv_mat_clone(_ptr);
     if (ptr == nullptr) {
       throw OpenCvException(_lastError() ?? 'clone failed');
@@ -146,7 +169,8 @@ class CvImage implements Finalizable {
 
   /// Writes this image to [path]. Throws [OpenCvException] on failure.
   void imwrite(String path) {
-    final pathPtr = path.toNativeUtf8().cast<Char>();
+    _ensureNotDisposed();
+    final pathPtr = path.toNativeUtf8(allocator: calloc).cast<Char>();
     final result = bindings.opencv_imwrite(pathPtr, _ptr);
     calloc.free(pathPtr);
     if (result == 0) {
@@ -156,7 +180,8 @@ class CvImage implements Finalizable {
 
   /// Encodes this image to the format specified by [ext] (e.g. `.png`, `.jpg`).
   Uint8List imencode(String ext) {
-    final extPtr = ext.toNativeUtf8().cast<Char>();
+    _ensureNotDisposed();
+    final extPtr = ext.toNativeUtf8(allocator: calloc).cast<Char>();
     final lenPtr = calloc<Int>();
     final bufPtr = bindings.opencv_imencode(extPtr, _ptr, lenPtr);
     calloc.free(extPtr);
@@ -175,6 +200,7 @@ class CvImage implements Finalizable {
 
   /// Converts the color space of this image. Returns a new [CvImage].
   CvImage cvtColor(ColorConversion conversion) {
+    _ensureNotDisposed();
     final ptr = bindings.opencv_cvt_color(_ptr, conversion.code);
     if (ptr == nullptr) {
       throw OpenCvException(_lastError() ?? 'cvtColor failed');
@@ -189,6 +215,7 @@ class CvImage implements Finalizable {
     double sigmaX = 0,
     double sigmaY = 0,
   }) {
+    _ensureNotDisposed();
     final ptr = bindings.opencv_gaussian_blur(_ptr, ksize, sigmaX, sigmaY);
     if (ptr == nullptr) {
       throw OpenCvException(_lastError() ?? 'gaussianBlur failed');
@@ -201,6 +228,7 @@ class CvImage implements Finalizable {
     required double threshold1,
     required double threshold2,
   }) {
+    _ensureNotDisposed();
     final ptr = bindings.opencv_canny(_ptr, threshold1, threshold2);
     if (ptr == nullptr) {
       throw OpenCvException(_lastError() ?? 'canny failed');
@@ -214,6 +242,7 @@ class CvImage implements Finalizable {
     required int height,
     Interpolation interpolation = Interpolation.linear,
   }) {
+    _ensureNotDisposed();
     final ptr = bindings.opencv_resize(_ptr, width, height, interpolation.code);
     if (ptr == nullptr) {
       throw OpenCvException(_lastError() ?? 'resize failed');

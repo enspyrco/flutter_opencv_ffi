@@ -16,6 +16,11 @@ const _androidUrl =
     'https://github.com/opencv/opencv/releases/download/$_opencvVersion/'
     'opencv-$_opencvVersion-android-sdk.zip';
 
+/// Expected file sizes for integrity verification (from GitHub release assets).
+/// Update these when changing [_opencvVersion].
+const _iosExpectedSize = 93058287;
+const _androidExpectedSize = 318235406;
+
 void main(List<String> args) async {
   await build(args, (input, output) async {
     if (!input.config.buildCodeAssets) return;
@@ -110,6 +115,7 @@ Future<List<String>> _iosFlags(BuildInput input, Logger log) async {
     input: input,
     url: _iosUrl,
     dirName: 'opencv-ios-$_opencvVersion',
+    expectedSize: _iosExpectedSize,
     log: log,
   );
 
@@ -155,6 +161,7 @@ Future<List<String>> _androidFlags(BuildInput input, Logger log) async {
     input: input,
     url: _androidUrl,
     dirName: 'opencv-android-$_opencvVersion',
+    expectedSize: _androidExpectedSize,
     log: log,
   );
 
@@ -217,10 +224,14 @@ String? _androidAbi(Architecture? arch) {
 
 /// Downloads a zip from [url] into the shared output directory and extracts it.
 /// Returns the extraction directory. Skips download if already cached.
+///
+/// If [expectedSize] is provided, the downloaded file's size is verified to
+/// catch corruption or tampering.
 Future<Directory> _downloadAndExtract({
   required BuildInput input,
   required String url,
   required String dirName,
+  int? expectedSize,
   required Logger log,
 }) async {
   final cacheDir = Directory.fromUri(
@@ -253,6 +264,19 @@ Future<Directory> _downloadAndExtract({
     throw StateError(
       'Failed to download OpenCV SDK: ${downloadResult.stderr}',
     );
+  }
+
+  // Verify file size to catch corruption or tampering.
+  if (expectedSize != null) {
+    final actualSize = zipFile.lengthSync();
+    if (actualSize != expectedSize) {
+      cacheDir.deleteSync(recursive: true);
+      throw StateError(
+        'OpenCV SDK size mismatch: expected $expectedSize bytes, '
+        'got $actualSize bytes. The download may be corrupt or tampered.',
+      );
+    }
+    log.info('Download integrity verified ($actualSize bytes).');
   }
 
   log.info('Extracting OpenCV SDK...');
